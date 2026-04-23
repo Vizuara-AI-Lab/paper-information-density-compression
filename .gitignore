@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# LaTeX intermediates
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+*.toc
+*.fls
+*.fdb_latexmk
+
+# Secrets
+.env
+.env.*
+
+# Audit-only content
+visual_audit/
+visual_audit_acl/
+ref_papers/
+
+# Session bookkeeping not intended for repo
+_*.py
+student/transcripts/*.txt
