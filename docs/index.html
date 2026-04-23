@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Information Density: Comparing Context-Compression Families Under a Reader-Independent Protocol</title>
+  <meta name="description" content="Comparing eight context-compression methods across five families under a reader-independent evaluation protocol. Single-pass distilBART attains ID = 4.24 at the tightest budget.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="#top" class="brand">context-compression / information-density</a>
+      <ul class="nav-links">
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#contributions">Contributions</a></li>
+        <li><a href="#method">Method</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#next">Next</a></li>
+      </ul>
+      <div class="nav-cta">
+        <a href="paper.pdf" class="pill">Paper</a>
+        <a href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression" class="pill pill-outline">Code</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <header class="hero">
+      <p class="eyebrow">long-context LLMs · prompt compression · evaluation protocol</p>
+      <h1>A single compressor family beats every classical baseline at the tightest budget, and iteration hurts.</h1>
+      <p class="lede">We compare eight context compressors across five families on LongBench multifieldqa_en under three fixed token budgets, scoring each on reader-independent signals so compressor quality is not confounded with reader strength.</p>
+
+      <dl class="metadata-grid">
+        <div><dt>Author</dt><dd>Vikash Chandra Mishra</dd></div>
+        <div><dt>Primary metric</dt><dd>ID_mean_across_methods</dd></div>
+        <div><dt>Result</dt><dd><strong>1.2828 &plusmn; 0.3139</strong></dd></div>
+        <div><dt>Seeds</dt><dd>3 (3 per cell)</dd></div>
+        <div><dt>Models</dt><dd>distilBART-CNN-12-6 · MiniLM-L6-v2</dd></div>
+        <div><dt>Dataset</dt><dd>LongBench / multifieldqa_en</dd></div>
+        <div><dt>Examples per seed</dt><dd>25</dd></div>
+        <div><dt>Budgets</dt><dd>r &isin; {0.10, 0.25, 0.50}</dd></div>
+        <div><dt>License</dt><dd>MIT</dd></div>
+      </dl>
+
+      <nav class="hero-cta">
+        <a href="paper.pdf" class="btn btn-primary">Read the paper &rarr;</a>
+        <a href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression" class="btn btn-ghost">See the code &rarr;</a>
+      </nav>
+    </header>
+
+    <section id="abstract" class="section-narrow">
+      <h2><span class="section-num">01</span> Abstract</h2>
+      <p>Context compression replaces a long source passage with a shorter surrogate that downstream readers can still use, but existing studies typically report downstream QA accuracy under a frozen large reader and omit cheap classical baselines, obscuring how much of the reported gain is specific to learned abstractive models. We evaluate eight compressors spanning five families (truncation, random sampling, extractive graph, structured memory, neural abstractive) on LongBench multifieldqa_en under three fixed target budgets r \{0.10, 0.25, 0.50\} and report four reader-independent signals: token F1 answer recall, exact match, MiniLM embedding similarity, and realised compression ratio, along with a derived information density ID = AR / CR. Single-pass distilBART attains ID = 4.24 at r = 0.10, roughly an order of magnitude above any non-abstractive family, and stays between 3.75 and 4.24 across budgets. Iterative compaction reliably loses 7% to 11% of single-pass information density, consistent with compounded per-pass information loss. Extractive graph summarisers overshoot the target ratio by up to 2.8 at the tightest budget because they commit to whole sentences; a regex-based structured memory schema compresses to an almost constant CR 0.045 regardless of budget and is self-limiting, a property we argue is desirable for systems with hard memory caps. Across three seeds and 25 examples per seed, the aggregate ID_{mean_across_methods} = 1.28 0.31; relative orderings are stable across seeds.</p>
+    </section>
+
+    <section id="contributions">
+      <h2><span class="section-num">02</span> Contributions</h2>
+      <div class="card-grid">
+        <article class="feature-card">
+          <span class="card-num">01</span>
+          <h3>Taxonomy of compressors</h3>
+          <p>Eight compressors across five families (truncation, random sampling, extractive graph, structured memory, neural abstractive) share a single evaluation grid.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">02</span>
+          <h3>Reader-independent metrics</h3>
+          <p>Every compressor is scored on answer recall, exact match, embedding similarity, and realised compression ratio, then summarised with information density ID = AR / CR.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">03</span>
+          <h3>Negative result on iteration</h3>
+          <p>Iterative two-pass compaction loses 7% to 11% of single-pass information density at every budget, consistent with compounded per-pass information loss.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">04</span>
+          <h3>Self-limiting structured memory</h3>
+          <p>A regex-based fact extractor (years, numerics, proper nouns, quoted strings) saturates at the document's entity capacity, holding information density flat across all requested budgets.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="method">
+      <h2><span class="section-num">03</span> Method</h2>
+      <p class="section-lede">Every (example, compressor, budget) triple produces one compressed text, which is scored on four reader-independent signals; a derived information density metric ID = answer-recall / realised-compression-ratio summarises the trade-off.</p>
+      <div class="card-grid">
+        <article class="feature-card">
+          <span class="card-num">01</span>
+          <h3>Dataset</h3>
+          <p>25 examples per seed from LongBench multifieldqa_en (English multi-field QA; contexts averaging 4,000 tokens), deterministically shuffled per seed.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">02</span>
+          <h3>Compressor fan-out</h3>
+          <p>Each example is compressed by all eight methods at target budgets r ∈ {0.10, 0.25, 0.50}, producing 72 per-example scores per (method, budget) cell.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">03</span>
+          <h3>Scoring</h3>
+          <p>The compressed text is scored against the gold answer on token-F1 (AR), exact match (EM), MiniLM embedding similarity (ES), and realised compression ratio (CR); ID = AR / CR follows.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-num">04</span>
+          <h3>Aggregation</h3>
+          <p>Three seeds × 8 methods × 3 budgets give 72 cells; we report per-cell mean ± cross-seed standard deviation and a single aggregate across methods.</p>
+        </article>
+      </div>
+
+      <figure class="wide-figure">
+        <img src="figures/fig-pipeline.png" alt="Evaluation pipeline: each example is compressed by all eight methods at three budgets, then scored on four reader-independent signals.">
+        <figcaption>Figure 1 &mdash; Evaluation pipeline. The same compressed text is scored against the gold answer on four reader-independent signals: token-F1 answer recall, exact match, MiniLM embedding similarity, and realised compression ratio. Information density ID is the derived AR / CR ratio.</figcaption>
+      </figure>
+    </section>
+
+    <section id="results">
+      <h2><span class="section-num">04</span> Results</h2>
+      <div class="big-metric">
+        <div class="metric-value">1.2828</div>
+        <div class="metric-label">ID_mean_across_methods &plusmn; 0.3139, averaged over three seeds; single-pass distilBART reaches ID = 4.24 at the tightest budget</div>
+      </div>
+      <p class="section-lede">At target budget r = 0.10, single-pass abstractive distilBART attains an information density of 4.24, the highest of any method in the evaluation. Iterative compaction reaches 3.94 at the same budget; extractive LexRank and TextRank sit at 0.11 and 0.06 respectively; positional truncation hovers at 0.32 (head) and 0.25 (tail).</p>
+
+      <figure class="wide-figure">
+        <img src="figures/fig-main-info-density.png" alt="Bar chart of information density at target budget r = 0.10 for all eight compressors; abstractive methods dominate at 4.24 and 3.94.">
+        <figcaption>Figure 2 &mdash; Information density at the tightest budget (r = 0.10). Abstractive methods (red) are an order of magnitude above extractive (orange) and truncation (blue); random sampling (green) sits between them due to a budget-overshoot artefact.</figcaption>
+      </figure>
+
+      <figure class="wide-figure">
+        <img src="figures/fig-budget-sweep.png" alt="Line plot: information density vs target budget on a log scale. Abstractive families hold steady; extractive and truncation decay sharply.">
+        <figcaption>Figure 3 &mdash; Information density across the three target budgets (log y-axis). Abstractive methods preserve high density at every budget; structured memory is flat across budgets; extractive and truncation methods decay rapidly as the budget grows.</figcaption>
+      </figure>
+    </section>
+
+    <section id="context" class="section-narrow">
+      <h2><span class="section-num">05</span> Context</h2>
+      <p>Prior context-compression studies typically evaluate a single family and report downstream QA accuracy under a frozen large reader, which conflates compressor quality with reader robustness. This study puts eight compressors across five families on a single reader-independent evaluation grid and adds a regex-based structured-memory baseline that, to our knowledge, has not previously been reported on LongBench under a comparable protocol.</p>
+      <p>The target venue is ACL; the two-column typeset paper is 9.5 body pages versus the 8-page long-paper limit, so Findings of ACL is the natural fit. Alternatives include EMNLP, COLM, TMLR, and TACL.</p>
+    </section>
+
+    <section id="next">
+      <h2><span class="section-num">06</span> Where to go next</h2>
+      <div class="cta-grid">
+        <a class="cta-card" href="paper.pdf">
+          <span class="cta-num">01</span>
+          <h3>Read the paper &rarr;</h3>
+          <p>Full typeset PDF in ACL two-column format.</p>
+        </a>
+        <a class="cta-card" href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression">
+          <span class="cta-num">02</span>
+          <h3>See the code &rarr;</h3>
+          <p>Experiment script, plan, per-seed metrics, and figure sources on GitHub.</p>
+        </a>
+        <a class="cta-card" href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression/blob/main/experiments/01-context-compression-baseline/experiment.py">
+          <span class="cta-num">03</span>
+          <h3>Reproduce &rarr;</h3>
+          <p>Run the Modal script or the same file locally on CPU in roughly the same wall-clock.</p>
+        </a>
+        <a class="cta-card" href="#cite">
+          <span class="cta-num">04</span>
+          <h3>Cite &rarr;</h3>
+          <p>BibTeX entry below; copy with one click.</p>
+        </a>
+      </div>
+    </section>
+
+    <section id="cite" class="section-narrow">
+      <h2><span class="section-num">07</span> Cite</h2>
+      <div class="cite-block">
+        <button type="button" class="cite-copy-btn" data-target="cite-bibtex" aria-label="Copy BibTeX to clipboard">Copy</button>
+        <pre><code id="cite-bibtex">@techreport{mishra2026information,
+  title   = {Information Density: Comparing Context-Compression Families Under a Reader-Independent Protocol},
+  author  = {Vikash Chandra Mishra},
+  year    = 2026,
+  url     = {https://github.com/Vizuara-AI-Lab/paper-information-density-compression},
+}</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-col footer-brand">
+        <div class="brand-mark">information-density-compression</div>
+        <p class="footer-lede">Reader-independent evaluation of context compression. Eight methods. Five families. Three budgets.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="#abstract">Abstract</a></li>
+          <li><a href="#contributions">Contributions</a></li>
+          <li><a href="#method">Method</a></li>
+          <li><a href="#results">Results</a></li>
+          <li><a href="#cite">Cite</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>External</h4>
+        <ul>
+          <li><a href="paper.pdf">Paper (PDF)</a></li>
+          <li><a href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression">GitHub</a></li>
+          <li><a href="https://github.com/Vizuara-AI-Lab/paper-information-density-compression/blob/main/review.md">Peer review</a></li>
+        </ul>
+      </div>
+      <div class="footer-col footer-copy">
+        <p>&copy; 2026 Vikash Chandra Mishra.</p>
+        <p>Released under the MIT License.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const buttons = document.querySelectorAll('.cite-copy-btn');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const targetId = btn.getAttribute('data-target');
+          const el = document.getElementById(targetId);
+          if (!el) return;
+          const text = el.innerText;
+          let ok = false;
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(text);
+              ok = true;
+            }
+          } catch (e) { /* fall through */ }
+          if (!ok) {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            sel.removeAllRanges();
+          }
+          const original = btn.textContent;
+          btn.textContent = ok ? 'Copied' : 'Copy failed';
+          btn.classList.add(ok ? 'is-copied' : 'is-error');
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove('is-copied', 'is-error');
+          }, 1500);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
